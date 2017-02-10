@@ -177,8 +177,8 @@ for mid in midSeqArray:
                     raise Exception('Waiting for too long to have files downloaded') 
         
             for filename in os.listdir(tempFolder):
-                origin = tempFolder + "/" + filename
-                destination = midFolderName + "/" + filename
+                origin = tempFolder + "/" + filename.decode('utf-8')
+                destination = midFolderName + "/" + filename.decode('utf-8')
                 shutil.move(origin, destination)            
                 attachements_downloaded = attachements_downloaded + 1
 
@@ -221,6 +221,11 @@ for mid in midSeqArray:
         with open("./" + folder + "/midFailed.csv", 'ab') as csvfile:
             midwriter = csv.writer(csvfile, delimiter=',',quotechar='|', quoting=csv.QUOTE_MINIMAL)
             midwriter.writerow([mid])                    
+
+	# remove and create again download folder
+        if os.path.exists(tempFolder):
+            shutil.rmtree(tempFolder)
+        os.makedirs(tempFolder)            
             
 browser.quit()        
 print "-----------------------------------------------------"            
