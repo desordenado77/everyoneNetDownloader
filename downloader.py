@@ -18,7 +18,7 @@ from selenium import webdriver
 from selenium.webdriver.common.desired_capabilities import DesiredCapabilities
 from selenium.webdriver.chrome.options import Options
 from selenium.webdriver.common.by import By
-
+from selenium.common.exceptions import TimeoutException
 
 parser = argparse.ArgumentParser()
 parser.add_argument("user", help="Username")
@@ -97,6 +97,7 @@ else:
 
 success_mids = 0
 fail_mids = 0
+timeout_mids = 0
 attachements_downloaded = 0
 
 # go through all emails in mid sequence array
@@ -104,7 +105,14 @@ for mid in midSeqArray:
     try: 
         print "Mid: " + mid
         print "Done: " + str(success_mids + fail_mids) + " from " + str(len(midSeqArray))
-        browser.execute_script("View('" + mid + "');")
+        try :
+            browser.execute_script("View('" + mid + "');")
+        except TimeoutException:
+            print "Skipping Timeout Error"
+            timeout_mids = timeout_mids + 1
+            with open("./" + folder + "/midTimeout.csv", 'ab') as csvfile:
+                midwriter = csv.writer(csvfile, delimiter=',',quotechar='|', quoting=csv.QUOTE_MINIMAL)
+                midwriter.writerow([mid])    
 
         midFolderName = "./" + folder + "/" + mid
         if not os.path.exists(midFolderName):
@@ -134,6 +142,7 @@ for mid in midSeqArray:
         # remove duplicates        
         # this is not working, because the duplicate is on the href not on the element itself
         # elems = list(set(elems))
+        print "removing duplicates"
         for elem in elems:
             href_txt = elem.get_attribute("href")
             for other_elem in elems:
@@ -142,25 +151,38 @@ for mid in midSeqArray:
                     if href_txt == other_href_txt:
                         elems.remove(other_elem)
                         print "Removing duplicate file: " + other_href_txt    
-        
+        print "done"
         files_to_download = 0
         for elem in elems:
+            print "click " + str(files_to_download)
             # download attachements, including email parts
-            elem.click()
+            try:
+                elem.click()
+            except TimeoutException:
+                print "Skipping Timeout Error"
+                timeout_mids = timeout_mids + 1
+                with open("./" + folder + "/midTimeout.csv", 'ab') as csvfile:
+                    midwriter = csv.writer(csvfile, delimiter=',',quotechar='|', quoting=csv.QUOTE_MINIMAL)
+                    midwriter.writerow([mid])    
             files_to_download = files_to_download + 1
 	        # print elem.get_attribute("href")
-        
+
+        print "files: " + str(files_to_download)
+
         if files_to_download != 0:
             counter = 0
-            while len(os.listdir(tempFolder)) != files_to_download:
+            print "files download started?"
+            while len(os.listdir(tempFolder)) < files_to_download:
                 time.sleep(2)
                 counter = counter + 1
                 if counter >= 300: # sleeping 2 seconds this is 10 minutes
                     #exception handler will catch it and write to the list of failed mids for later retry if desired
                     raise Exception('Waiting for too long to get all files in folder') 
-            
+            print "yes"
             crdownload_not_found = 1
             counter = 0
+            print "all files downloaded?"
+
             while crdownload_not_found:
                 time.sleep(2)
                 crdownload_not_found = 0
@@ -175,13 +197,17 @@ for mid in midSeqArray:
                 if counter >= 3600: # sleeping 2 hours for full download of everything. It is a huge amount of time, but better safe than sorry in case speed goes down eventually.
                     #exception handler will catch it and write to the list of failed mids for later retry if desired
                     raise Exception('Waiting for too long to have files downloaded') 
-        
+            
+            print "yes"
+
+            print "moving files"
             for filename in os.listdir(tempFolder):
                 origin = tempFolder + "/" + filename.decode('utf-8')
                 destination = midFolderName + "/" + filename.decode('utf-8')
                 shutil.move(origin, destination)            
                 attachements_downloaded = attachements_downloaded + 1
 
+            print "done"
             # find attachements names, including email parts       
             attachement_file = open(midFolderName + "/emailAttachements", 'w')
             table =  browser.find_element_by_xpath("/html/body/table/tbody/tr[2]/td[1]/table[3]/tbody/tr[3]/td/table[3]/tbody/tr[2]/td/table/tbody/tr/td[2]/table/tbody/tr[2]/td/table/tbody/tr/td")      
@@ -192,7 +218,7 @@ for mid in midSeqArray:
                         attachement_file.write(td.text.encode('utf-8') + "\n")
                     counter = counter + 1
             attachement_file.close()  # you can omit in most cases as the destructor will call it
-
+            print "email attachements file created"
         # Get the actual displayed webpage source with full headers.
         # Having all the other content this is really unnecesary, but just in case I missed something on the other steps. Better safe than sorry
         # Since it is kind of redundant, I am ignoring errors here. There could be errors from the encoding to utf-8 (most likely), so I ignore those.
@@ -232,6 +258,7 @@ print "-----------------------------------------------------"
 print "Ammount of emails: " + str(len(midSeqArray))
 print "Processed successfuly: " + str(success_mids)
 print "Processed with failures: " + str(fail_mids)
+print "Timed out: " + str(timeout_mids)
 print "Attachements Downloaded: " + str(attachements_downloaded)
 print "-----------------------------------------------------"
 
