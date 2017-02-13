@@ -327,7 +327,7 @@ class myHandler(BaseHTTPRequestHandler):
         elif self.path.startswith("/attachements") or self.path.startswith("/embeddedhtml"):
             print "here: " +self.path
             path = self.path.replace("/attachements", root_folder)
-            path = self.path.replace("/embeddedhtml", root_folder)
+            path = path.replace("/embeddedhtml", root_folder)
             path = urllib2.unquote(path)
             print "here again: " + path
             if os.path.exists(path):
