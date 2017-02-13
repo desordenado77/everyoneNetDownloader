@@ -17,6 +17,9 @@ emails_in_folder = []
 current_folder = ""
 email_list = []
 root_folder = ""
+pageNumBefore = -1
+reverse_list = 0
+current_order = "datetime"
 
 EMAILS_IN_PAGE = 20
 PORT_NUMBER = 8080
@@ -49,7 +52,7 @@ FOLDER_HEADER = """<HTML>
 <BR>
 <TABLE WIDTH = 100%>
 <TR>
-<TD><div align=right><A HREF="$$folder_name$$.html?page=$$page_number_prev$$"><-- Prev Page</a></div></TD><TD><div align=left><A HREF="$$folder_name$$.html?page=$$page_number_next$$">Next Page --></A></div></TD>
+<TD><div align=right><A HREF="$$folder_name$$.html?page=$$page_number_prev$$"><-- Prev Page</a></div></TD><TD><div align=center>Page $$current_page_number$$ of $$number_of_pages$$</div></TD><TD><div align=left><A HREF="$$folder_name$$.html?page=$$page_number_next$$">Next Page --></A></div></TD>
 </TR>
 </TABLE>
 <BR>
@@ -86,7 +89,6 @@ EMAIL_FOOTER = """</BODY>
 #This class will handles any incoming request from
 #the browser 
 class myHandler(BaseHTTPRequestHandler):
-    current_order = "datetime"
 
     def send_ok_header(self):
         self.send_response(200)
@@ -137,6 +139,9 @@ class myHandler(BaseHTTPRequestHandler):
         global folders
         global emails_in_folder
         global email_list
+        global pageNumBefore
+        global reverse_list
+        global current_order
 
         print self.path
         if self.path == "/index.html" or self.path == "/":
@@ -146,7 +151,7 @@ class myHandler(BaseHTTPRequestHandler):
             i = 0
             for folder in folders:
                 text = FOLDER_DESC
-                text = text.replace("$$folder_path$$", "folders/" + folder + ".html?order=date&page=0")
+                text = text.replace("$$folder_path$$", "folders/" + folder + ".html?order=datetime&page=0")
                 text = text.replace("$$folder_name$$", folder)
                 text = text.replace("$$folder_emails$$", str(emails_in_folder[i]))
                 self.wfile.write(text)
@@ -178,10 +183,13 @@ class myHandler(BaseHTTPRequestHandler):
             except KeyError:
                 print "order type not found"
 
+            same_order = False
             if order_type == "":
-                order_type = self.current_order
+                order_type = current_order
             else:
-                self.current_order = order_type
+                if current_order == order_type:
+                    same_order = True
+                current_order = order_type
 
             print order_type
 
@@ -191,6 +199,14 @@ class myHandler(BaseHTTPRequestHandler):
             query = urlparse(self.path).query
             query_components = dict(qc.split("=") for qc in query.split("&"))
             pageNum = query_components["page"]
+
+            if pageNumBefore == pageNum and same_order:
+                reverse_list = reverse_list ^ 1
+            
+            if reverse_list == 1 : 
+                email_list.reverse()
+
+            pageNumBefore = pageNum
 
             prevPageNum = int(pageNum) - 1
             nextPageNum = int(pageNum) + 1
@@ -205,6 +221,8 @@ class myHandler(BaseHTTPRequestHandler):
             text = text.replace("$$page_number_prev$$", str(prevPageNum))
             text = text.replace("$$page_number_next$$", str(nextPageNum))
             text = text.replace("$$page_number$$", pageNum)
+            text = text.replace("$$current_page_number$$", str(int(pageNum)+1))
+            text = text.replace("$$number_of_pages$$", str((num_of_emails/EMAILS_IN_PAGE)+1))
 
             if folder == "Sent":
                 text = text.replace("$$sender$$", "to")
