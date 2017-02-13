@@ -314,7 +314,7 @@ class myHandler(BaseHTTPRequestHandler):
                     self.wfile.write(text)
                 elif attachement["type"].startswith("text/html"):
                     text = EMAIL_TXT_ATTACHEMENT
-                    text = text.replace("$$txt_attachement$$", "<iframe width=100%% height=400 src=" + "\"../../embeddedhtml" + email_path.replace(root_folder, "") + "/" + attachement["name"] + "\"><p>Your browser does not support iframes.</p></iframe>")
+                    text = text.replace("$$txt_attachement$$", "<iframe width=100%% height=600 src=" + "\"../../embeddedhtml" + email_path.replace(root_folder, "") + "/" + attachement["name"] + "\"><p>Your browser does not support iframes.</p></iframe>")
                     self.wfile.write(text)
                 elif attachement["type"].startswith("image"):
                     text = EMAIL_TXT_ATTACHEMENT
@@ -325,25 +325,31 @@ class myHandler(BaseHTTPRequestHandler):
             self.wfile.write(EMAIL_FOOTER)
 
         elif self.path.startswith("/attachements") or self.path.startswith("/embeddedhtml"):
-            print "here: " +self.path
             path = self.path.replace("/attachements", root_folder)
             path = path.replace("/embeddedhtml", root_folder)
             path = urllib2.unquote(path)
-            print "here again: " + path
+            path = path.split("@", 1)[0]
+            
             if os.path.exists(path):
                 file = open(path, "rb")
     #note that this potentially makes every file on your computer readable by the internet
                 self.send_response(200)
+                
+                file_contents = file.read()
+                
                 if self.path.startswith("/embeddedhtml"):
                     print "html embedded"
                     self.send_header('Content-type','text/html')
+                    file_contents = file_contents.replace("src=\"cid:", "src=\"")
+                    file_contents = file_contents.replace("src='cid:", "src='")
                 else:
                     self.send_header('Content-type',    'application/octet-stream')
                     self.send_header('Content-Disposition',    'attachment')
                 self.end_headers()
-                self.wfile.write(file.read())
+                self.wfile.write(file_contents)
                 file.close()
-
+        else:
+            print "Unhandled request: " +self.path
 
 parser = argparse.ArgumentParser()
 parser.add_argument("--folder", help="Folder name")
