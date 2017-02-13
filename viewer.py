@@ -6,6 +6,7 @@ from BaseHTTPServer import BaseHTTPRequestHandler,HTTPServer
 from datetime import datetime
 from urlparse import urlparse
 import urllib2
+import sys
 
 # index.html --> folders available
 # folders/foldername.html?order=[sender|subject|date]&page=number
@@ -18,6 +19,7 @@ email_list = []
 root_folder = ""
 
 EMAILS_IN_PAGE = 20
+PORT_NUMBER = 8080
 
 INDEX_HEADER = """<HTML>
 <HEAD>
@@ -103,7 +105,11 @@ class myHandler(BaseHTTPRequestHandler):
                 read_email[next_line] = line
             if next_line == "date":
                 #Fri 10/02/2017 10:07 PM
-                locale.setlocale(locale.LC_TIME, "en_US.utf8")
+                if sys.platform.startswith("win") or sys.platform.startswith("Win"):
+                    locale.setlocale(locale.LC_TIME, "English_United States.1252")
+                else:
+                    locale.setlocale(locale.LC_TIME, "en_US.utf8")
+                
                 read_email["datetime"] = datetime.strptime(line, '%a %m/%d/%y %I:%M %p\n')
 
             next_line = ""
@@ -340,19 +346,24 @@ class myHandler(BaseHTTPRequestHandler):
 
 
 parser = argparse.ArgumentParser()
-parser.add_argument("folder", help="Folder name")
+parser.add_argument("--folder", help="Folder name")
 args = parser.parse_args()
 
-for file in os.listdir(args.folder):
-    if os.path.isdir(args.folder + "/" + file):
+if args.folder:
+    arg_folder = args.folder
+else:
+    arg_folder = "."
+    
+for file in os.listdir(arg_folder):
+    if os.path.isdir(arg_folder + "/" + file):
         folders.append(file)
 
-root_folder = args.folder
+root_folder = arg_folder
 
 for folder in folders:
     emails = 0
-    for file in os.listdir(args.folder+ "/" + folder):
-        if os.path.isdir(args.folder+ "/" + folder + "/" + file):
+    for file in os.listdir(arg_folder+ "/" + folder):
+        if os.path.isdir(arg_folder+ "/" + folder + "/" + file):
             emails = emails + 1
     emails_in_folder.append(emails)
 
@@ -360,11 +371,10 @@ print folders
 print emails_in_folder
 
 
-PORT_NUMBER = 8080
 
 #Create a web server and define the handler to manage the
 #incoming request
-server = HTTPServer(('', PORT_NUMBER), myHandler)
+server = HTTPServer(('127.0.0.1', PORT_NUMBER), myHandler)
 print 'Started httpserver on port ' , PORT_NUMBER
 
 #Wait forever for incoming htto requests
