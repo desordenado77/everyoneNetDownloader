@@ -23,7 +23,16 @@ PORT_NUMBER = 8080
 
 INDEX_HEADER = """<HTML>
 <HEAD>
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
 <TITLE>Folders</TITLE>
+<style>
+body {
+    margin-top: 4%;
+    margin-bottom: 4%;
+    margin-right: 4%;
+    margin-left: 4%;
+}
+</style>
 </HEAD>
 <BODY>
 <H1>Folders:<BR></H1>
@@ -42,7 +51,16 @@ FOLDER_DESC = """<TR>
 
 FOLDER_HEADER = """<HTML>
 <HEAD>
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
 <TITLE>$$folder_name$$</TITLE>
+<style>
+body {
+    margin-top: 4%;
+    margin-bottom: 4%;
+    margin-right: 4%;
+    margin-left: 4%;
+}
+</style>
 </HEAD>
 <BODY>
 <H1>$$folder_name$$:<BR></H1>
@@ -69,11 +87,27 @@ FOLDER_FOOTER = """</TABLE>
 
 EMAIL_HEADER = """<HTML>
 <HEAD>
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
 <TITLE>$$subject$$</TITLE>
+<style>
+pre {
+    white-space: pre-wrap;       /* Since CSS 2.1 */
+    white-space: -moz-pre-wrap;  /* Mozilla, since 1999 */
+    white-space: -pre-wrap;      /* Opera 4-6 */
+    white-space: -o-pre-wrap;    /* Opera 7 */
+    word-wrap: break-word;       /* Internet Explorer 5.5+ */
+}
+body {
+    margin-top: 4%;
+    margin-bottom: 4%;
+    margin-right: 4%;
+    margin-left: 4%;
+}
+</style>
 </HEAD>
 <BODY>"""
 
-EMAIL_DETAILS = """<pre>$$details$$</pre><br><hr><br>"""
+EMAIL_DETAILS = """<h2><pre>$$details$$</pre></h2><br><hr><br>"""
 
 EMAIL_ATTACHEMENT_LIST = """<A HREF="$$attachement_url$$" target="_blank">$$attachement_name$$</a> $$attachement_type$$<BR>"""
 
