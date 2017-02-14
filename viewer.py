@@ -7,6 +7,7 @@ from datetime import datetime
 from urlparse import urlparse
 import urllib2
 import sys
+import subprocess
 
 # index.html --> folders available
 # folders/foldername.html?order=[sender|subject|date]&page=number
@@ -26,7 +27,16 @@ PORT_NUMBER = 8080
 
 INDEX_HEADER = """<HTML>
 <HEAD>
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
 <TITLE>Folders</TITLE>
+<style>
+body {
+    margin-top: 4%;
+    margin-bottom: 4%;
+    margin-right: 4%;
+    margin-left: 4%;
+}
+</style>
 </HEAD>
 <BODY>
 <H1>Folders:<BR></H1>
@@ -45,7 +55,16 @@ FOLDER_DESC = """<TR>
 
 FOLDER_HEADER = """<HTML>
 <HEAD>
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
 <TITLE>$$folder_name$$</TITLE>
+<style>
+body {
+    margin-top: 4%;
+    margin-bottom: 4%;
+    margin-right: 4%;
+    margin-left: 4%;
+}
+</style>
 </HEAD>
 <BODY>
 <H1>$$folder_name$$:<BR></H1>
@@ -72,11 +91,27 @@ FOLDER_FOOTER = """</TABLE>
 
 EMAIL_HEADER = """<HTML>
 <HEAD>
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
 <TITLE>$$subject$$</TITLE>
+<style>
+pre {
+    white-space: pre-wrap;       /* Since CSS 2.1 */
+    white-space: -moz-pre-wrap;  /* Mozilla, since 1999 */
+    white-space: -pre-wrap;      /* Opera 4-6 */
+    white-space: -o-pre-wrap;    /* Opera 7 */
+    word-wrap: break-word;       /* Internet Explorer 5.5+ */
+}
+body {
+    margin-top: 4%;
+    margin-bottom: 4%;
+    margin-right: 4%;
+    margin-left: 4%;
+}
+</style>
 </HEAD>
 <BODY>"""
 
-EMAIL_DETAILS = """<pre>$$details$$</pre><br><hr><br>"""
+EMAIL_DETAILS = """<h2><pre>$$details$$</pre></h2><br><hr><br>"""
 
 EMAIL_ATTACHEMENT_LIST = """<A HREF="$$attachement_url$$" target="_blank">$$attachement_name$$</a> $$attachement_type$$<BR>"""
 
@@ -107,7 +142,7 @@ class myHandler(BaseHTTPRequestHandler):
                 read_email[next_line] = line
             if next_line == "date":
                 #Fri 10/02/2017 10:07 PM
-                if sys.platform.startswith("win") or sys.platform.startswith("Win"):
+                if (sys.platform.lower()).startswith("win"):
                     locale.setlocale(locale.LC_TIME, "English_United States.1252")
                 else:
                     locale.setlocale(locale.LC_TIME, "en_US.utf8")
@@ -399,7 +434,11 @@ print emails_in_folder
 #Create a web server and define the handler to manage the
 #incoming request
 server = HTTPServer(('127.0.0.1', PORT_NUMBER), myHandler)
-print 'Started httpserver on port ' , PORT_NUMBER
+print "Started httpserver on port " , PORT_NUMBER
+print "Open http://127.0.0.1:8080 on your preferred browser to see your downloaded email"
+
+if (sys.platform.lower()).startswith("win"):
+    subprocess.call(['C:\\Program Files (x86)\\Google\\Chrome\\Application\\chrome.exe', '127.0.0.1:8080'])
 
 #Wait forever for incoming htto requests
 server.serve_forever()
