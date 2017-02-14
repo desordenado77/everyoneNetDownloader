@@ -146,8 +146,11 @@ class myHandler(BaseHTTPRequestHandler):
                     locale.setlocale(locale.LC_TIME, "English_United States.1252")
                 else:
                     locale.setlocale(locale.LC_TIME, "en_US.utf8")
-                
-                read_email["datetime"] = datetime.strptime(line, '%a %m/%d/%y %I:%M %p\n')
+
+                try:
+                    read_email["datetime"] = datetime.strptime(line, '%a %m/%d/%y %I:%M %p\n')
+                except ValueError:
+                    read_email["datetime"] = datetime.strptime(line, '%a %d/%m/%Y %I:%M %p\n')
 
             next_line = ""
 
