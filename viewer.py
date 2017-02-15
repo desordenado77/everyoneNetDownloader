@@ -174,6 +174,11 @@ class myHandler(BaseHTTPRequestHandler):
                 read_email = {}
             elif line.startswith("Message ID: "):
                 read_email["mid"] = line.replace("Message ID: ", "")
+                # there are some emails with no subject field, so we are initializing them to an empty string
+                read_email['subject'] = ""
+                read_email['to'] = ""
+                read_email['from'] = ""
+                read_email['date'] = "Tue 21/12/2010 10:30 PM\n"
             elif line.startswith("From:"):
                 next_line = "from"
             elif line.startswith("To:"):                
