@@ -8,7 +8,15 @@ from urlparse import urlparse
 import urllib2
 import sys
 import subprocess
+from threading import Thread
+from time import sleep
 
+
+def threaded_chrome_launch():
+    sleep(2)
+    subprocess.call(['C:\\Program Files (x86)\\Google\\Chrome\\Application\\chrome.exe', '--new-window', '127.0.0.1:8080'])
+  
+    
 # index.html --> folders available
 # folders/foldername.html?order=[sender|subject|date]&page=number
 # emails/foldername/mid.html
@@ -108,6 +116,12 @@ body {
     margin-left: 4%;
 }
 </style>
+<script>
+  function resizeIframe(obj) {
+    obj.style.height = obj.contentWindow.document.body.scrollHeight + 'px';
+    obj.style.width = obj.contentWindow.document.body.scrollWidth + 'px';
+  }
+</script>
 </HEAD>
 <BODY>"""
 
@@ -370,7 +384,7 @@ class myHandler(BaseHTTPRequestHandler):
                     self.wfile.write(text)
                 elif attachement["type"].startswith("text/html"):
                     text = EMAIL_TXT_ATTACHEMENT
-                    text = text.replace("$$txt_attachement$$", "<iframe width=100%% height=600 src=" + "\"../../embeddedhtml" + email_path.replace(root_folder, "") + "/" + attachement["name"] + "\"><p>Your browser does not support iframes.</p></iframe>")
+                    text = text.replace("$$txt_attachement$$", "<iframe src=" + "\"../../embeddedhtml" + email_path.replace(root_folder, "") + "/" + attachement["name"] + " \" frameborder=\"0\" scrolling=\"no\" onload=\"resizeIframe(this)\"  \"><p>Your browser does not support iframes.</p></iframe>")
                     self.wfile.write(text)
                 elif attachement["type"].startswith("image"):
                     text = EMAIL_TXT_ATTACHEMENT
@@ -441,9 +455,13 @@ print "Started httpserver on port " , PORT_NUMBER
 print "Open http://127.0.0.1:8080 on your preferred browser to see your downloaded email"
 
 if (sys.platform.lower()).startswith("win"):
-    subprocess.call(['C:\\Program Files (x86)\\Google\\Chrome\\Application\\chrome.exe', '127.0.0.1:8080'])
+    thread = Thread(target = threaded_chrome_launch)
+    thread.start()
 
 #Wait forever for incoming htto requests
 server.serve_forever()
+if (sys.platform.lower()).startswith("win"):
+    thread.join()
+    print "thread finished...exiting"
 
 
