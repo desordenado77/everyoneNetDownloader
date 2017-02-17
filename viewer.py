@@ -48,10 +48,12 @@ body {
 </HEAD>
 <BODY>
 <H1>Folders:<BR></H1>
-<BR>
+<HR><BR>
 <TABLE WIDTH = 50%>"""
 
 INDEX_FOOTER = """</TABLE>
+<BR><HR><BR>
+<A HREF="../close.html">Close E-Mail viewer</a>
 </BODY>
 </HTML>"""
 
@@ -76,23 +78,25 @@ body {
 </HEAD>
 <BODY>
 <H1>$$folder_name$$:<BR></H1>
-<BR>
+<HR><BR>
 <TABLE WIDTH = 100%>
 <TR>
 <TD><div align=right><A HREF="$$folder_name$$.html?page=$$page_number_prev$$"><-- Prev Page</a></div></TD><TD><div align=center>Page $$current_page_number$$ of $$number_of_pages$$</div></TD><TD><div align=left><A HREF="$$folder_name$$.html?page=$$page_number_next$$">Next Page --></A></div></TD>
 </TR>
 </TABLE>
 <BR>
+<HR><BR>
 <TABLE WIDTH = 100%>
 <TR>
-<TD><H2><A HREF="$$folder_name$$.html?page=$$page_number$$&order=$$sender$$">Sender</a></H2></TD><TD><H2><A HREF="$$folder_name$$.html?page=$$page_number$$&order=subject">Subject</a></H2></TD><TD><H2><A HREF="$$folder_name$$.html?page=$$page_number$$&order=datetime">Date</a></H2></TD>
+<TD><H2><A HREF="$$folder_name$$.html?page=$$page_number$$&order=$$sender$$">$$to_or_from$$</a></H2></TD><TD><H2><A HREF="$$folder_name$$.html?page=$$page_number$$&order=subject">Subject</a></H2></TD><TD><H2><A HREF="$$folder_name$$.html?page=$$page_number$$&order=datetime">Date</a></H2></TD>
 </TR>"""
 FOLDER_EMAIL_DESC = """<TR>
 <TD>$$sender$$</TD><TD><A HREF="../emails/$$folder_name$$/$$mid$$.html">$$subject$$</a></TD><TD>$$date$$</TD>
 </TR>"""
 FOLDER_FOOTER = """</TABLE>
-<BR>
-<A HREF="../index.html">back to folders</a>
+<BR><HR><BR>
+<A HREF="../index.html">Go back to folders</a><BR>
+<A HREF="../close.html">Close E-Mail viewer</a>
 </BODY>
 </HTML>"""
 
@@ -125,14 +129,29 @@ body {
 </HEAD>
 <BODY>"""
 
-EMAIL_DETAILS = """<h2><pre>$$details$$</pre></h2><br><hr><br>"""
+EMAIL_DETAILS = """<h2><pre>$$details$$</pre></h2><hr><br>
+<b>Attachments:</b><br><br>"""
 
 EMAIL_ATTACHEMENT_LIST = """<A HREF="$$attachement_url$$" target="_blank">$$attachement_name$$</a> $$attachement_type$$<BR>"""
 
-EMAIL_TXT_ATTACHEMENT = """<HR><BR>$$txt_attachement$$"""
+EMAIL_TXT_ATTACHEMENT = """<BR><HR><BR><b>$$atachment_name$$:</b><BR>$$txt_attachement$$"""
 
-EMAIL_FOOTER = """</BODY>
+EMAIL_FOOTER = """<BR><HR><BR>
+<a href="javascript:history.back()">Back</a><BR>
+<A HREF="../../close.html">Close E-Mail viewer</a>
+</BODY>
 </HTML>"""
+
+CLOSE = """<HTML>
+<HEAD>
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+<TITLE>Closing</TITLE>
+</HEAD>
+<BODY>
+<H2>You may now close your browser</H2>
+</BODY>
+</HTML>"""
+ 
 
 
 #This class will handles any incoming request from
@@ -190,6 +209,13 @@ class myHandler(BaseHTTPRequestHandler):
 
         summary_file.close()
 
+    def limit_text_size(self, text, size):
+        text_length = len(text)
+        if text_length > (size+3):
+            return text[:size] + "..."
+        else:
+            return text
+        
     #Handler for the GET requests
     def do_GET(self):
         global current_folder
@@ -199,6 +225,7 @@ class myHandler(BaseHTTPRequestHandler):
         global pageNumBefore
         global reverse_list
         global current_order
+        global server
 
         print self.path
         if self.path == "/index.html" or self.path == "/":
@@ -283,8 +310,10 @@ class myHandler(BaseHTTPRequestHandler):
 
             if folder == "Sent":
                 text = text.replace("$$sender$$", "to")
+                text = text.replace("$$to_or_from$$", "To")
             else:
                 text = text.replace("$$sender$$", "from")
+                text = text.replace("$$to_or_from$$", "From")
 
             self.wfile.write(text)
 
@@ -292,12 +321,12 @@ class myHandler(BaseHTTPRequestHandler):
                 text = FOLDER_EMAIL_DESC
                 text = text.replace("$$folder_name$$", folder)
                 if folder != "Sent":
-                    text = text.replace("$$sender$$", cgi.escape(email["from"]))
+                    text = text.replace("$$sender$$", self.limit_text_size(cgi.escape(email["from"]), 100))
                 else:
-                    text = text.replace("$$sender$$", cgi.escape(email["to"]))
+                    text = text.replace("$$sender$$", self.limit_text_size(cgi.escape(email["to"]), 100))
                 text = text.replace("$$mid$$", cgi.escape(email["mid"]))
-                text = text.replace("$$subject$$", cgi.escape(email["subject"]))
-                text = text.replace("$$date$$", cgi.escape(email["date"]))
+                text = text.replace("$$subject$$", self.limit_text_size(cgi.escape(email["subject"]), 100))
+                text = text.replace("$$date$$", self.limit_text_size(cgi.escape(email["date"]), 100))
                 self.wfile.write(text)
 
             self.wfile.write(FOLDER_FOOTER)
@@ -324,7 +353,7 @@ class myHandler(BaseHTTPRequestHandler):
             for email in email_list:
                 print email
                 if int(email["mid"]) == int(mid):
-                    text = text.replace("$$subject$$", email["subject"])
+                    text = text.replace("$$subject$$", cgi.escape(email["subject"]))
             
             self.wfile.write(text)
 
@@ -375,10 +404,11 @@ class myHandler(BaseHTTPRequestHandler):
             for attachement in attachement_list:
 
 #EMAIL_TXT_ATTACHEMENT = """<HR><BR>$$txt_attachement$$"""
-
                 print attachement["type"]
+
+                text = EMAIL_TXT_ATTACHEMENT
+                text = text.replace("$$atachment_name$$", attachement["name"])
                 if attachement["type"].startswith("text/plain"):
-                    text = EMAIL_TXT_ATTACHEMENT
                     path = email_path + "/" + attachement["name"]
                     path = urllib2.unquote(path).strip()
                     print path
@@ -386,15 +416,12 @@ class myHandler(BaseHTTPRequestHandler):
                         file = open(path, "rb")
                         text = text.replace("$$txt_attachement$$", "<pre>" + file.read() + "</pre>")
                         file.close()
-                    self.wfile.write(text)
                 elif attachement["type"].startswith("text/html"):
-                    text = EMAIL_TXT_ATTACHEMENT
                     text = text.replace("$$txt_attachement$$", "<iframe src=" + "\"../../embeddedhtml" + email_path.replace(root_folder, "") + "/" + attachement["name"] + " \" frameborder=\"0\" scrolling=\"no\" onload=\"resizeIframe(this)\"  \"><p>Your browser does not support iframes.</p></iframe>")
-                    self.wfile.write(text)
                 elif attachement["type"].startswith("image"):
-                    text = EMAIL_TXT_ATTACHEMENT
                     text = text.replace("$$txt_attachement$$", "<img width=50%% src=" + "\"../../embeddedhtml" + email_path.replace(root_folder, "") + "/" + attachement["name"] + "\"></img>")
-                    self.wfile.write(text)
+                    
+                self.wfile.write(text)
 
 
             self.wfile.write(EMAIL_FOOTER)
@@ -423,6 +450,12 @@ class myHandler(BaseHTTPRequestHandler):
                 self.end_headers()
                 self.wfile.write(file_contents)
                 file.close()
+        elif self.path.startswith("/close.html"):
+            self.send_ok_header()
+            self.wfile.write(CLOSE)
+            assassin = Thread(target=server.shutdown)
+            assassin.daemon = True
+            assassin.start()
         else:
             print "Unhandled request: " +self.path
 
