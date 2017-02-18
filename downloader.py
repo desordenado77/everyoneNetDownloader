@@ -25,6 +25,7 @@ parser.add_argument("user", help="Username")
 parser.add_argument("password", help="Password")
 parser.add_argument("folder", help="email folder")
 parser.add_argument("--midFile", help="Message ID list file. You can use the midFailed.csv file to reattempt failed messages")
+parser.add_argument("--getSource", help="0: dont download html source, 1: download html source")
 args = parser.parse_args()
 
 base = "http://demadrid.mail.everyone.net/email/scripts"
@@ -32,6 +33,11 @@ basefw = "http://demadrid.mail.everyone.net/eonapps/ft/wm/page/compose"
 loginuser = base + "/loginuser.pl"
 folder = args.folder
 tempFolder = "./temp"
+
+if args.getSource:
+    getSource = int(args.getSource)
+else:
+    getSource = 1
 
 # generate mid sequence array if it was provided
 midSeqArray = []
@@ -175,9 +181,40 @@ for mid in midSeqArray:
             while len(os.listdir(tempFolder)) < files_to_download:
                 time.sleep(2)
                 counter = counter + 1
+
+                if counter == 150: # sleeping 2 seconds this is 5 minutes
+                    # first remove all files
+
+                    with open("./" + folder + "/midClickAgain.csv", 'ab') as csvfile:
+                        midwriter = csv.writer(csvfile, delimiter=',',quotechar='|', quoting=csv.QUOTE_MINIMAL)
+                        midwriter.writerow([mid])
+
+
+                    for the_file in os.listdir(tempFolder):
+                        file_path = os.path.join(tempFolder, the_file)
+                        try:
+                            if os.path.isfile(file_path):
+                                os.unlink(file_path)
+                            #elif os.path.isdir(file_path): shutil.rmtree(file_path)
+                        except Exception as e:
+                            print(e)
+
+                    print "clicking again "
+                    for elem in elems:
+                        # download attachements, including email parts
+                        try:
+                            elem.click()
+                        except TimeoutException:
+                            print "Skipping Timeout Error"
+                            timeout_mids = timeout_mids + 1
+                            with open("./" + folder + "/midTimeout.csv", 'ab') as csvfile:
+                                midwriter = csv.writer(csvfile, delimiter=',',quotechar='|', quoting=csv.QUOTE_MINIMAL)
+                                midwriter.writerow([mid])
+
                 if counter >= 300: # sleeping 2 seconds this is 10 minutes
                     #exception handler will catch it and write to the list of failed mids for later retry if desired
                     raise Exception('Waiting for too long to get all files in folder') 
+
             print "yes"
             crdownload_not_found = 1
             counter = 0
@@ -219,18 +256,20 @@ for mid in midSeqArray:
                     counter = counter + 1
             attachement_file.close()  # you can omit in most cases as the destructor will call it
             print "email attachements file created"
-        # Get the actual displayed webpage source with full headers.
-        # Having all the other content this is really unnecesary, but just in case I missed something on the other steps. Better safe than sorry
-        # Since it is kind of redundant, I am ignoring errors here. There could be errors from the encoding to utf-8 (most likely), so I ignore those.
-        try:
-            browser.execute_script("ToggleHeaders();")
-            html = browser.page_source
-            browser.execute_script("ToggleHeaders();")
-            webpage_file = open(midFolderName + "/emailSource.html", 'w')
-            webpage_file.write(html.encode('utf-8'))
-            webpage_file.close()
-        except Exception as e: 
-            print "Error Occurred while full header file download of MID " + mid + ": " + str(e)
+
+        if getSource:
+            # Get the actual displayed webpage source with full headers.
+            # Having all the other content this is really unnecesary, but just in case I missed something on the other steps. Better safe than sorry
+            # Since it is kind of redundant, I am ignoring errors here. There could be errors from the encoding to utf-8 (most likely), so I ignore those.
+            try:
+                browser.execute_script("ToggleHeaders();")
+                html = browser.page_source
+                browser.execute_script("ToggleHeaders();")
+                webpage_file = open(midFolderName + "/emailSource.html", 'w')
+                webpage_file.write(html.encode('utf-8'))
+                webpage_file.close()
+            except Exception as e: 
+                print "Error Occurred while full header file download of MID " + mid + ": " + str(e)
             
         with open("./" + folder + "/midSuccess.csv", 'ab') as csvfile:
             midwriter = csv.writer(csvfile, delimiter=',',quotechar='|', quoting=csv.QUOTE_MINIMAL)
