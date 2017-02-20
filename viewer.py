@@ -188,7 +188,11 @@ class myHandler(BaseHTTPRequestHandler):
             next_line = ""
 
             if line.startswith("--------------------------------------------------") :      
-                if read_email != {}:
+                if read_email != {} and \
+                    read_email['subject'] != "" and \
+                    read_email['to'] != "" and \
+                    read_email['from'] != "" and \
+                    read_email['date'] != "Tue 21/12/2010 10:30 PM\n":
                     email_list.append(read_email)
                 read_email = {}
             elif line.startswith("Message ID: "):
